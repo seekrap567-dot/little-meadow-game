@@ -50,8 +50,8 @@
         }
         button {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 18px;
-            padding: 10px 20px;
+            font-size: 16px;
+            padding: 10px 15px;
             background-color: #27ae60;
             color: white;
             border: 3px solid #1e8449;
@@ -75,7 +75,6 @@
     <div class="header">💰 Монеты: <span id="coins">20</span></div>
     
     <div class="farm-grid" id="grid">
-        <!-- 9 грядок -->
         <div class="plot" data-id="0"></div>
         <div class="plot" data-id="1"></div>
         <div class="plot" data-id="2"></div>
@@ -88,45 +87,53 @@
     </div>
 
     <div class="shop">
-        <p>Выбери, что посадить (нажми кнопку, потом грядку):</p>
+        <p>Выбери, что посадить:</p>
         <div class="controls">
-            <button id="btn-carrot" onclick="selectSeed('carrot')">🥕 Морковь (2 монеты)</button>
-            <button id="btn-potato" onclick="selectSeed('potato')">🥔 Картофель (4 монеты)</button>
+            <button id="btn-carrot" onclick="selectSeed('carrot')">🥕 Морковь (2)</button>
+            <button id="btn-potato" onclick="selectSeed('potato')">🥔 Картофель (4)</button>
         </div>
     </div>
 
     <script>
-        let coins = 20;
-        let selectedSeed = 'carrot'; // По умолчанию морковь
-        const plots = Array(9).fill(null); // Состояние грядок
+        // Загружаем сохранение или начинаем с нуля
+        let savedData = localStorage.getItem('farmSave');
+        let state = savedData ? JSON.parse(savedData) : { coins: 20, plots: Array(9).fill(null) };
+        
+        let coins = state.coins;
+        let plots = state.plots;
+        let selectedSeed = 'carrot';
 
         const seedData = {
-            'carrot': { cost: 2, sell: 5, growTime: 3000, icon: '🥕', name: 'Морковь' },
-            'potato': { cost: 4, sell: 8, growTime: 5000, icon: '🥔', name: 'Картофель' }
+            'carrot': { cost: 2, sell: 5, growTime: 3000, icon: '🥕' },
+            'potato': { cost: 4, sell: 8, growTime: 5000, icon: '🥔' }
         };
+
+        // Функция сохранения
+        function saveGame() {
+            localStorage.setItem('farmSave', JSON.stringify({ coins: coins, plots: plots }));
+        }
 
         function updateUI() {
             document.getElementById('coins').innerText = coins;
             
-            // Обновляем кнопки
             document.getElementById('btn-carrot').disabled = coins < seedData['carrot'].cost;
             document.getElementById('btn-potato').disabled = coins < seedData['potato'].cost;
 
-            // Обновляем грядки
             const plotDivs = document.querySelectorAll('.plot');
             plotDivs.forEach((div, index) => {
-                const state = plots[index];
-                if (!state) {
+                const p = plots[index];
+                if (!p) {
                     div.innerText = '';
                     div.style.backgroundColor = '#8e6f4b';
-                } else if (state.stage === 'growing') {
+                } else if (p.stage === 'growing') {
                     div.innerText = '🌱';
                     div.style.backgroundColor = '#a67c52';
-                } else if (state.stage === 'ready') {
-                    div.innerText = state.data.icon;
+                } else if (p.stage === 'ready') {
+                    div.innerText = p.data.icon;
                     div.style.backgroundColor = '#d4b895';
                 }
             });
+            saveGame(); // Сохраняем при каждом обновлении интерфейса
         }
 
         function selectSeed(type) {
@@ -134,21 +141,15 @@
         }
 
         function plant(index) {
-            const plot = plots[index];
-            if (plot) return; // Если грядка занята, ничего не делаем
-
+            if (plots[index]) return;
             const data = seedData[selectedSeed];
-            if (coins < data.cost) {
-                alert("Недостаточно монет!");
-                return;
-            }
+            if (coins < data.cost) return;
 
-            // Тратим монеты и сажаем
             coins -= data.cost;
             plots[index] = { stage: 'growing', data: data };
             updateUI();
 
-            // Таймер роста
+            // Запускаем таймер роста
             setTimeout(() => {
                 if (plots[index] && plots[index].stage === 'growing') {
                     plots[index].stage = 'ready';
@@ -158,30 +159,34 @@
         }
 
         function harvest(index) {
-            const plot = plots[index];
-            if (!plot || plot.stage !== 'ready') return;
-
-            // Собираем урожай
-            coins += plot.data.sell;
+            const p = plots[index];
+            if (!p || p.stage !== 'ready') return;
+            coins += p.data.sell;
             plots[index] = null;
             updateUI();
         }
 
-        // Добавляем обработчики кликов на грядки
+        // Обработка кликов
         document.querySelectorAll('.plot').forEach(div => {
             div.addEventListener('click', (e) => {
                 const index = parseInt(e.target.getAttribute('data-id'));
-                const plot = plots[index];
-                
-                if (!plot) {
-                    plant(index);
-                } else if (plot.stage === 'ready') {
-                    harvest(index);
-                }
+                if (!plots[index]) plant(index);
+                else if (plots[index].stage === 'ready') harvest(index);
             });
         });
 
-        // Первый запуск
+        // Восстанавливаем таймеры для тех растений, которые были посажены до перезагрузки
+        plots.forEach((p, i) => {
+            if (p && p.stage === 'growing') {
+                setTimeout(() => {
+                    if (plots[i] && plots[i].stage === 'growing') {
+                        plots[i].stage = 'ready';
+                        updateUI();
+                    }
+                }, p.data.growTime);
+            }
+        });
+
         updateUI();
     </script>
 </body>
