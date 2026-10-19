@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Уютная Пиксельная Ферма</title>
+    <title>Уютная Ферма</title>
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
@@ -11,22 +11,17 @@
             color: white;
             text-align: center;
             margin: 0;
-            padding: 15px;
+            padding: 10px;
             user-select: none;
         }
-        .header {
-            font-size: 22px;
-            margin-bottom: 15px;
-            color: #f1c40f;
-            text-shadow: 2px 2px #000;
-        }
+        .header { font-size: 20px; margin-bottom: 10px; color: #f1c40f; text-shadow: 2px 2px #000; }
         .farm-grid {
             display: grid;
-            grid-template-columns: repeat(3, 90px);
-            grid-template-rows: repeat(3, 90px);
-            gap: 10px;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(3, 80px);
+            gap: 8px;
             justify-content: center;
-            margin: 0 auto 20px auto;
+            margin: 0 auto 15px auto;
         }
         .plot {
             background-color: #8e6f4b;
@@ -35,83 +30,83 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 35px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .plot:active {
-            transform: scale(0.95);
-        }
-        .plot.locked {
-            background-color: #34495e;
-            border-color: #2c3e50;
             font-size: 30px;
-        }
-        .controls {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        button {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            padding: 10px;
-            background-color: #27ae60;
-            color: white;
-            border: 3px solid #1e8449;
-            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            flex: 1 1 40%;
         }
-        button:disabled {
-            background-color: #7f8c8d;
-            border-color: #2c3e50;
-            cursor: not-allowed;
+        .plot.locked { background-color: #34495e; border-color: #2c3e50; }
+        
+        .coop {
+            background-color: #a67c52;
+            border: 4px dashed #5c3a21;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px auto;
+            max-width: 260px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .btn-sell {
-            background-color: #d35400;
-            border-color: #a04000;
-            flex: 1 1 100%;
+        .chicken-area {
+            font-size: 30px;
+            min-height: 40px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
         }
-        .shop-title {
-            font-size: 16px;
-            color: #bdc3c7;
-            margin-top: 15px;
+
+        .btn-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        button {
+            font-family: inherit; font-size: 14px; padding: 10px; background-color: #27ae60; color: white;
+            border: 2px solid #1e8449; border-radius: 6px; font-weight: bold; cursor: pointer; width: 45%;
         }
+        button:disabled { background-color: #7f8c8d; border-color: #2c3e50; }
+        .btn-buy { background-color: #2980b9; border-color: #1f618d; width: 95%; }
+        .btn-sell { background-color: #d35400; border-color: #a04000; width: 95%; }
+        
+        .btn-egg { background-color: #f39c12; border-color: #d68910; width: 95%; margin-top: 10px; }
+        .shop-title { font-size: 16px; color: #bdc3c7; margin-top: 15px; }
     </style>
 </head>
 <body>
-
     <div class="header">💰 Монеты: <span id="coins">20</span></div>
-    
-    <div class="farm-grid" id="grid">
-        <!-- Грядки будут генерироваться через JS -->
-    </div>
+    <div class="farm-grid" id="grid"></div>
 
-    <div class="controls">
+    <div class="btn-row">
         <button id="btn-carrot" onclick="selectSeed('carrot')">🥕 Морковь (2)</button>
         <button id="btn-potato" onclick="selectSeed('potato')">🥔 Картофель (4)</button>
+    </div>
+    <div class="btn-row">
         <button class="btn-sell" onclick="sellAll()">🚜 Собрать весь урожай</button>
     </div>
+    <div class="btn-row">
+        <button class="btn-buy" id="btn-buy-plot" onclick="buyPlot()">🔒 Купить грядку (10)</button>
+    </div>
 
-    <div class="shop-title">Расширение фермы:</div>
-    <div class="controls">
-        <button id="btn-buy-plot" onclick="buyPlot()">🔒 Купить грядку (10)</button>
+    <!-- Блок Курятника -->
+    <div class="shop-title">Курятник:</div>
+    <div class="coop" id="coop">
+        <div class="chicken-area" id="chickens"></div>
+        <div style="font-size: 24px; margin-bottom: 10px;">🥚 Яйца: <span id="eggs">0</span></div>
+        <button class="btn-egg" id="btn-collect-eggs" onclick="collectEggs()">Собрать яйца (0)</button>
+    </div>
+    <div class="btn-row">
+        <button class="btn-buy" id="btn-buy-chicken" onclick="buyChicken()">🐔 Купить курочку (30)</button>
     </div>
 
     <script>
-        // Начальное состояние (3 открытые, 6 закрытых)
+        // Загрузка или сброс
         let savedData = localStorage.getItem('farmSave');
         let state = savedData ? JSON.parse(savedData) : { 
             coins: 20, 
-            plots: [null, null, null, 'locked', 'locked', 'locked', 'locked', 'locked', 'locked'] 
+            plots: [null, null, null, 'locked', 'locked', 'locked', 'locked', 'locked', 'locked'],
+            chickens: 0,
+            eggs: 0
         };
         
         let coins = state.coins;
         let plots = state.plots;
+        let chickens = state.chickens || 0;
+        let eggs = state.eggs || 0;
         let selectedSeed = 'carrot';
 
         const seedData = {
@@ -120,7 +115,9 @@
         };
 
         function saveGame() {
-            localStorage.setItem('farmSave', JSON.stringify({ coins: coins, plots: plots }));
+            localStorage.setItem('farmSave', JSON.stringify({ 
+                coins: coins, plots: plots, chickens: chickens, eggs: eggs 
+            }));
         }
 
         function generateGrid() {
@@ -139,108 +136,102 @@
 
         function updateUI() {
             document.getElementById('coins').innerText = coins;
+            document.getElementById('eggs').innerText = eggs;
             
             document.getElementById('btn-carrot').disabled = coins < seedData['carrot'].cost;
             document.getElementById('btn-potato').disabled = coins < seedData['potato'].cost;
             document.getElementById('btn-buy-plot').disabled = coins < 10 || !plots.includes('locked');
+            document.getElementById('btn-buy-chicken').disabled = coins < 30;
+            
+            const collectBtn = document.getElementById('btn-collect-eggs');
+            collectBtn.innerText = `Собрать яйца (${eggs})`;
+            collectBtn.disabled = eggs === 0;
 
+            // Отрисовка грядок
             const plotDivs = document.querySelectorAll('.plot');
             plotDivs.forEach((div, index) => {
                 const p = plots[index];
-                div.innerText = '';
-                div.className = 'plot';
-                
-                if (p === 'locked') {
-                    div.classList.add('locked');
-                    div.innerText = '🔒';
-                } else if (!p) {
-                    div.style.backgroundColor = '#8e6f4b';
-                } else if (p.stage === 'growing') {
-                    div.innerText = '🌱';
-                    div.style.backgroundColor = '#a67c52';
-                } else if (p.stage === 'ready') {
-                    div.innerText = p.data.icon;
-                    div.style.backgroundColor = '#d4b895';
-                }
+                div.innerText = ''; div.className = 'plot';
+                if (p === 'locked') { div.classList.add('locked'); div.innerText = '🔒'; }
+                else if (!p) { div.style.backgroundColor = '#8e6f4b'; }
+                else if (p.stage === 'growing') { div.innerText = '🌱'; div.style.backgroundColor = '#a67c52'; }
+                else if (p.stage === 'ready') { div.innerText = p.data.icon; div.style.backgroundColor = '#d4b895'; }
             });
+
+            // Отрисовка курочек
+            const chickenArea = document.getElementById('chickens');
+            chickenArea.innerHTML = '🐔'.repeat(chickens);
+            
             saveGame();
         }
 
-        function selectSeed(type) {
-            selectedSeed = type;
-        }
+        function selectSeed(type) { selectedSeed = type; }
 
         function handlePlotClick(index) {
             const p = plots[index];
-            
-            if (p === 'locked') {
-                alert('Эта грядка еще не куплена!');
-                return;
-            }
-            if (!p) {
-                plant(index);
-            } else if (p.stage === 'ready') {
-                harvest(index);
-            }
+            if (p === 'locked') return;
+            if (!p) plant(index);
+            else if (p.stage === 'ready') harvest(index);
         }
 
         function plant(index) {
             const data = seedData[selectedSeed];
             if (coins < data.cost) return;
-
             coins -= data.cost;
             plots[index] = { stage: 'growing', data: data };
             updateUI();
-
             setTimeout(() => {
-                if (plots[index] && plots[index].stage === 'growing') {
-                    plots[index].stage = 'ready';
-                    updateUI();
-                }
+                if (plots[index] && plots[index].stage === 'growing') { plots[index].stage = 'ready'; updateUI(); }
             }, data.growTime);
         }
 
         function harvest(index) {
             const p = plots[index];
             if (!p || p.stage !== 'ready') return;
-            coins += p.data.sell;
-            plots[index] = null;
-            updateUI();
+            coins += p.data.sell; plots[index] = null; updateUI();
         }
 
         function sellAll() {
             let earned = 0;
             plots.forEach((p, i) => {
-                if (p && p.stage === 'ready') {
-                    earned += p.data.sell;
-                    plots[i] = null;
-                }
+                if (p && p.stage === 'ready') { earned += p.data.sell; plots[i] = null; }
             });
-            if (earned > 0) {
-                coins += earned;
-                updateUI();
-            }
+            if (earned > 0) { coins += earned; updateUI(); }
         }
 
         function buyPlot() {
             if (coins < 10) return;
             const lockIndex = plots.indexOf('locked');
-            if (lockIndex !== -1) {
-                coins -= 10;
-                plots[lockIndex] = null;
-                generateGrid(); // Перерисовываем сетку
-            }
+            if (lockIndex !== -1) { coins -= 10; plots[lockIndex] = null; generateGrid(); }
         }
 
-        // Восстановление таймеров
+        function buyChicken() {
+            if (coins < 30) return;
+            coins -= 30;
+            chickens += 1;
+            updateUI();
+        }
+
+        function collectEggs() {
+            if (eggs === 0) return;
+            coins += eggs * 3; // 1 яйцо = 3 монеты
+            eggs = 0;
+            updateUI();
+        }
+
+        // Таймер курочек (каждые 10 секунд несут яйцо)
+        setInterval(() => {
+            if (chickens > 0) {
+                eggs += chickens; // Каждая курочка дает 1 яйцо
+                updateUI();
+            }
+        }, 10000);
+
         function restoreTimers() {
             plots.forEach((p, i) => {
                 if (p && p.stage === 'growing') {
                     setTimeout(() => {
-                        if (plots[i] && plots[i].stage === 'growing') {
-                            plots[i].stage = 'ready';
-                            updateUI();
-                        }
+                        if (plots[i] && plots[i].stage === 'growing') { plots[i].stage = 'ready'; updateUI(); }
                     }, p.data.growTime);
                 }
             });
